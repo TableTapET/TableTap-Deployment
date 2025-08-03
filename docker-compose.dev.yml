@@ -1,0 +1,59 @@
+# Development
+
+version: "3.8"
+
+services:
+  web:
+    container_name: tabletap-web
+    build:
+      context: ../TableTap-Frontend/
+      dockerfile: ../TableTap-Frontend/Dockerfile
+      target: dev
+    init: true
+    volumes:
+      - type: bind
+        source: ../TableTap-Frontend/
+        target: /home/node/app/
+      - type: volume
+        target: /home/node/app/node_modules
+    ports:
+      - "${FRONTEND_HOST_PORT:-5002}:${FRONTEND_CONTAINER_PORT:-5002}"
+    command: npm run dev
+
+  django-api:
+    container_name: tableTap-backend
+    build:
+      context: ../TableTap-Backend/
+      dockerfile: ../TableTap-Backend/Dockerfile
+    ports:
+      - 5001:5001
+    env_file:
+      - ../TableTap-Backend/.dev.env
+    entrypoint: ["/dev.entrypoint.sh"]
+    volumes:
+      - ../TableTap-Backend/:/TableTap-Backend
+    environment:
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+      - MONGO_URI=mongodb://mongo:27017
+      - DJANGO_ENV=development
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    container_name: tableTap-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    
+  mailhog:
+    image: mailhog/mailhog
+    container_name: tableTap-mailhog
+    ports: 
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+
+volumes:
+  mongo_data:

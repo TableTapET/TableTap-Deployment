@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  web:
+    container_name: tabletap-web-prod
+    build:
+      context: ../TableTap-Frontend/
+      dockerfile: ../TableTap-Frontend/Dockerfile
+      target: dev
+    init: true
+    volumes:
+      - type: bind
+        source: ../TableTap-Frontend/
+        target: /home/node/app/
+      - type: volume
+        target: /home/node/app/node_modules
+    environment:
+      - NODE_ENV=production
+    ports:
+      - 5003:5003
+    command: npm run start
+
+  django-api:
+    container_name: tableTap-backend-prod
+    build:
+      context: ../TableTap-Backend/
+      dockerfile: ../TableTap-Backend/Dockerfile
+    env_file:
+      - ../TableTap-Backend/.prod.env
+    entrypoint: ["/prod.entrypoint.sh"]
+    ports:
+      - 5001:5001
+    volumes:
+      - ../TableTap-Backend/:/TableTap-Backend
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    container_name: tableTap-mongo-prod
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
