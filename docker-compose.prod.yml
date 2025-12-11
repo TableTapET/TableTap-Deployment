@@ -39,7 +39,7 @@ services:
     image: mongo:7
     container_name: tableTap-mongo-prod
     ports:
-      - "27017:27017"
+      - "27018:27018"
     volumes:
       - mongo_data:/data/db
 
