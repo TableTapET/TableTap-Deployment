@@ -3,6 +3,8 @@
 version: "3.8"
 
 services:
+
+  # Dev Nextjs frontend
   web:
     container_name: tabletap-web
     build:
@@ -20,6 +22,7 @@ services:
       - "${FRONTEND_HOST_PORT:-5002}:${FRONTEND_CONTAINER_PORT:-5002}"
     command: npm run dev
 
+  # Dev django backend
   django-api:
     container_name: tableTap-backend
     build:
@@ -35,20 +38,22 @@ services:
     environment:
       - EMAIL_HOST=mailhog
       - EMAIL_PORT=1025
-      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_URI=mongodb://mongo:27018
       - DJANGO_ENV=development
     depends_on:
-      - mongo
+      - tabletap-mongo
 
-  mongo:
-    image: mongo:6
+  # Dev mongodb
+  tabletap-mongo:
+    image: mongo:7
     container_name: tableTap-mongo
     ports:
-      - "27017:27017"
+      - "27018:27018"
     volumes:
       - mongo_data:/data/db
     
-  mailhog:
+  # Dev mail server
+  tabletap-mailhog:
     image: mailhog/mailhog
     container_name: tableTap-mailhog
     ports: 
