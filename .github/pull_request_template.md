@@ -28,7 +28,7 @@ Steps:
 
 ---
 
-## 📸 Screenshots (if applicable)
+## Screenshots (if applicable)
 
 ---
 
