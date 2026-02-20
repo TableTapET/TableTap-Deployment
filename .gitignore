@@ -1,0 +1,4 @@
+# Envrionment variables
+*.env
+*.local
+*.development
