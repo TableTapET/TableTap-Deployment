@@ -5,8 +5,8 @@ version: "3.8"
 services:
 
   # Dev Nextjs frontend
-  web:
-    container_name: tabletap-web
+  tabletap-web:
+    container_name: Tabletap-frontend-dev
     build:
       context: ../TableTap-Frontend/
       dockerfile: ../TableTap-Frontend/Dockerfile
@@ -23,42 +23,98 @@ services:
     command: npm run dev
 
   # Dev django backend
-  django-api:
-    container_name: tableTap-backend
+  tabletap-backend:
+    container_name: TableTap-backend-dev
     build:
       context: ../TableTap-Backend/
       dockerfile: ../TableTap-Backend/Dockerfile
     ports:
       - 5001:5001
-    env_file:
-      - ../TableTap-Backend/.dev.env
     entrypoint: ["/dev.entrypoint.sh"]
     volumes:
       - ../TableTap-Backend/:/TableTap-Backend
     environment:
-      - EMAIL_HOST=mailhog
-      - EMAIL_PORT=1025
-      - MONGO_URI=mongodb://mongo:27018
-      - DJANGO_ENV=development
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      
+      # Mail provider
+      EMAIL_HOST: mailhog
+      EMAIL_PORT: "1025"
+      DJANGO_ENV: development
+
+      # Databases
+      MONGO_URI: mongodb://mongo:27018
+
+      # PostgreSQL
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # S3 / MinIO envrionments
+      AWS_S3_ENDPOINT_URL: http://minio:9000
+      AWS_STORAGE_BUCKET_NAME: tabletap-media
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
     depends_on:
+      - tabletap-postgres
       - tabletap-mongo
+      - tabletap-minio
+
+  # Dev Postgresql
+  tabletap-postgres:
+    image: postgres:18
+    container_name: TableTap-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql
 
   # Dev mongodb
   tabletap-mongo:
     image: mongo:7
-    container_name: tableTap-mongo
+    container_name: TableTap-mongo-dev
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27018:27018"
+    command: ["mongod", "--auth"]
     volumes:
       - mongo_data:/data/db
     
   # Dev mail server
   tabletap-mailhog:
     image: mailhog/mailhog
-    container_name: tableTap-mailhog
+    container_name: TableTap-mailhog-dev
     ports: 
       - "1026:1026" # SMTP
       - "8026:8026" # Web UI
 
+  # Dev minio/s3 bucket
+  tabletap-minio:
+    image: minio/minio
+    container_name: TableTap-minio-dev
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # MinIO console
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+
 volumes:
+  postgres_data:
   mongo_data:
+  minio_data:
