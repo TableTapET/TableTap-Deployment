@@ -10,9 +10,28 @@ jobs:
     steps:
       - name: Checkout Deployment Repo
         uses: actions/checkout@v4
+        with:
+          path: TableTap-Deployment
+
+      - name: Checkout Backend Repo
+        uses: actions/checkout@v4
+        with:
+          repository: TableTapET/TableTap-Backend
+          path: TableTap-Backend
+
+      - name: Checkout Frontend Repo
+        uses: actions/checkout@v4
+        with:
+          repository: TableTapET/TableTap-Frontend
+          path: TableTap-Frontend
+
+      - name: Create Dummy Env Files
+        run: |
+          touch TableTap-Backend/.prod.env
 
       - name: Validate Production Configuration
         run: |
+          cd TableTap-Deployment
           echo "Validating docker-compose.prod.yml syntax and configuration..."
           docker compose -f docker-compose.prod.yml config
 
