@@ -2,7 +2,7 @@ name: Continuous Deployment
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/TAB-4-automated-deployment"]
 
 jobs:
   validate-and-prepare-deployment:
