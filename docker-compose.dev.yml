@@ -1,7 +1,4 @@
 # Development
-
-version: "3.8"
-
 services:
 
   # Dev Nextjs frontend
