@@ -66,8 +66,6 @@ services:
     depends_on:
       tabletap-postgres:
         condition: service_healthy
-      tabletap-mongo:
-        condition: service_healthy
       tabletap-minio:
         condition: service_healthy
 
@@ -86,29 +84,6 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d tabletap"]
       interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # Dev mongodb
-  tabletap-mongo:
-    image: mongo:7
-    container_name: TableTap-mongo-dev
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-    ports:
-      - "27018:27017"
-    command: ["mongod", "--auth", "--port", "27018"]
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: >
-        mongosh --port 27018
-        -u ${MONGO_INITDB_ROOT_USERNAME}
-        -p ${MONGO_INITDB_ROOT_PASSWORD}
-        --authenticationDatabase admin
-        --eval "db.adminCommand('ping')"
-      interval: 10s
       timeout: 5s
       retries: 5
     
@@ -146,5 +121,4 @@ services:
 
 volumes:
   postgres_data:
-  mongo_data:
   minio_data:
