@@ -2,7 +2,7 @@ name: Continuous Deployment
 
 on:
   push:
-    branches: [ "main", "feature/TAB-4-automated-deployment"]
+    branches: [ "main"]
 
 jobs:
   validate-and-prepare-deployment:
@@ -41,7 +41,7 @@ jobs:
           echo "⚠️ Actual SSH deployment is paused because production infrastructure is not yet provisioned."
           echo "To enable real deployment, uncomment the SSH step in deploy.yml and add repository secrets."
 
-      # TODO: remebers in the future to uncomment this and fill in with valid vailues once a production server is purchased!
+      # TODO: remeber in the future to uncomment this and fill in with valid vailues once a production server is purchased!
       # - name: Deploy via SSH to Production
       #   uses: appleboy/ssh-action@v1.0.3
       #   with:
@@ -53,5 +53,5 @@ jobs:
       #       cd TableTap-Frontend && git pull origin main
       #       cd ../TableTap-Backend && git pull origin main
       #       cd ../TableTap-Deployment && git pull origin main
-      #       OCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --no-cache
+      #       DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --no-cache
       #       docker compose -f docker-compose.prod.yml up -d
