@@ -30,6 +30,8 @@ services:
     build:
       context: ../TableTap-Backend/
       dockerfile: ../TableTap-Backend/Dockerfile
+      args:
+        REQUIREMENTS_FILE: requirements-dev.txt
     ports:
       - 5001:5001
     entrypoint: ["/dev.entrypoint.sh"]
