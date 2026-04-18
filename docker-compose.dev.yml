@@ -70,8 +70,8 @@ services:
         condition: service_healthy
       tabletap-mongo:
         condition: service_healthy
-      tabletap-minio-init:
-        condition: service_completed_successfully
+      tabletap-minio:
+        condition: service_healthy
 
   # Dev Postgresql
   tabletap-postgres:
@@ -130,31 +130,26 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
+    entrypoint: >
+      /bin/sh -c "
+        minio server /data --console-address ':9001' &
+        MINIO_PID=$$!
+        until mc ready local 2>/dev/null; do sleep 1; done
+        mc alias set local http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD
+        mc mb --ignore-existing local/tabletap-media
+        mc anonymous set public local/tabletap-media
+        wait $$MINIO_PID
+      "
     volumes:
       - minio_data:/data
     ports:
       - "9000:9000" # S3 API
       - "9001:9001" # MinIO console
     healthcheck:
-      test: [ "CMD", "mc", "ready", "local" ]
+      test: [ "CMD-SHELL", "mc ready local && mc ls local/tabletap-media" ]
       interval: 30s
       timeout: 20s
       retries: 5
-
-  # MinIO bucket initialization
-  tabletap-minio-init:
-    image: minio/mc
-    container_name: TableTap-minio-init-dev
-    entrypoint: >
-      /bin/sh -c " mc alias set local http://tabletap-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && mc mb --ignore-existing local/tabletap-media && mc anonymous set public local/tabletap-media "
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    depends_on:
-      tabletap-minio:
-        condition: service_healthy
-    restart: "no"
 
 volumes:
   postgres_data:
