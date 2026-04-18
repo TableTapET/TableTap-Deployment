@@ -33,6 +33,8 @@ services:
     build:
       context: ../TableTap-Backend/
       dockerfile: ../TableTap-Backend/Dockerfile
+      args:
+        REQUIREMENTS_FILE: requirements-dev.txt
     ports:
       - 5001:5001
     entrypoint: ["/dev.entrypoint.sh"]
@@ -59,15 +61,15 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
       # S3 / MinIO envrionments
-      AWS_S3_ENDPOINT_URL: http://minio:9000
+      AWS_S3_ENDPOINT_URL: http://tabletap-minio:9000
       AWS_STORAGE_BUCKET_NAME: tabletap-media
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
     depends_on:
       tabletap-postgres:
         condition: service_healthy
-      tabletap-minio:
-        condition: service_healthy
+      tabletap-minio-init:
+        condition: service_completed_successfully
 
   # Dev Postgresql
   tabletap-postgres:
@@ -118,6 +120,24 @@ services:
       interval: 30s
       timeout: 20s
       retries: 5
+
+  # MinIO bucket initialization
+  tabletap-minio-init:
+    image: minio/mc
+    container_name: TableTap-minio-init-dev
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://tabletap-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/tabletap-media &&
+      mc anonymous set public local/tabletap-media
+      "
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    depends_on:
+      tabletap-minio:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   postgres_data:
