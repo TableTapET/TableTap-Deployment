@@ -2,3 +2,4 @@
 *.env
 *.local
 *.development
+.DS_Store
