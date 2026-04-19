@@ -33,6 +33,8 @@ services:
     build:
       context: ../TableTap-Backend/
       dockerfile: ../TableTap-Backend/Dockerfile
+      args:
+        REQUIREMENTS_FILE: requirements-dev.txt
     ports:
       - 5001:5001
     entrypoint: ["/dev.entrypoint.sh"]
@@ -59,15 +61,15 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
       # S3 / MinIO envrionments
-      AWS_S3_ENDPOINT_URL: http://minio:9000
+      AWS_S3_ENDPOINT_URL: http://tabletap-minio:9000
       AWS_STORAGE_BUCKET_NAME: tabletap-media
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
     depends_on:
       tabletap-postgres:
         condition: service_healthy
-      tabletap-minio:
-        condition: service_healthy
+      tabletap-minio-init:
+        condition: service_completed_successfully
 
   # Dev Postgresql
   tabletap-postgres:
@@ -107,14 +109,23 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
+    entrypoint: >
+      /bin/sh -c "
+        minio server /data --console-address ':9001' &
+        MINIO_PID=$$!
+        until mc ready local 2>/dev/null; do sleep 1; done
+        mc alias set local http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD
+        mc mb --ignore-existing local/tabletap-media
+        mc anonymous set public local/tabletap-media
+        wait $$MINIO_PID
+      "
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # MinIO console
+      - "9000:9000" # S3 API
+      - "9001:9001" # MinIO console
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD-SHELL", "mc ready local && mc ls local/tabletap-media" ]
       interval: 30s
       timeout: 20s
       retries: 5

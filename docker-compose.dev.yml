@@ -19,7 +19,7 @@ services:
       - "${FRONTEND_HOST_PORT:-5002}:${FRONTEND_CONTAINER_PORT:-5002}"
     command: npm run dev
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5002" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,14 +34,14 @@ services:
         REQUIREMENTS_FILE: requirements-dev.txt
     ports:
       - 5001:5001
-    entrypoint: ["/dev.entrypoint.sh"]
+    entrypoint: [ "/dev.entrypoint.sh" ]
     volumes:
       - ../TableTap-Backend/:/TableTap-Backend
     environment:
       DEBUG: ${DEBUG}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      
+
       # Mail provider
       EMAIL_HOST: mailhog
       EMAIL_PORT: "1025"
@@ -58,7 +58,7 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
       # S3 / MinIO envrionments
-      AWS_S3_ENDPOINT_URL: http://minio:9000
+      AWS_S3_ENDPOINT_URL: http://tabletap-minio:9000
       AWS_STORAGE_BUCKET_NAME: tabletap-media
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
@@ -83,7 +83,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d tabletap"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d tabletap" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -97,29 +97,25 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27018:27017"
-    command: ["mongod", "--auth", "--port", "27018"]
+    command: [ "mongod", "--auth", "--port", "27018" ]
     volumes:
       - mongo_data:/data/db
     healthcheck:
       test: >
-        mongosh --port 27018
-        -u ${MONGO_INITDB_ROOT_USERNAME}
-        -p ${MONGO_INITDB_ROOT_PASSWORD}
-        --authenticationDatabase admin
-        --eval "db.adminCommand('ping')"
+        mongosh --port 27018 -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin --eval "db.adminCommand('ping')"
       interval: 10s
       timeout: 5s
       retries: 5
-    
+
   # Dev mail server
   tabletap-mailhog:
     image: mailhog/mailhog
     container_name: TableTap-mailhog-dev
-    ports: 
+    ports:
       - "1026:1026" # SMTP
       - "8026:8026" # Web UI
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8025"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8025" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -131,14 +127,23 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
+    entrypoint: >
+      /bin/sh -c "
+        minio server /data --console-address ':9001' &
+        MINIO_PID=$$!
+        until mc ready local 2>/dev/null; do sleep 1; done
+        mc alias set local http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD
+        mc mb --ignore-existing local/tabletap-media
+        mc anonymous set public local/tabletap-media
+        wait $$MINIO_PID
+      "
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # MinIO console
+      - "9000:9000" # S3 API
+      - "9001:9001" # MinIO console
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD-SHELL", "mc ready local && mc ls local/tabletap-media" ]
       interval: 30s
       timeout: 20s
       retries: 5
